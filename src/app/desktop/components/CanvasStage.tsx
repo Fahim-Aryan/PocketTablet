@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react'
 import type Konva from 'konva'
-import { Stage, Layer, Line, Rect, Ellipse } from 'react-konva'
+import { Stage, Layer, Line, Rect, Ellipse, Text } from 'react-konva'
 import type { StrokePoint, ToolState } from '../../../shared/types/drawing'
 
 interface Stroke {
@@ -129,6 +129,18 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
         className="cursor-grab"
       >
         <Layer>
+          {strokes.length === 0 && (
+            <Text
+              x={dimensions.width / 2 - 120}
+              y={dimensions.height / 2 - 40}
+              text="PocketTablet"
+              fontSize={36}
+              fontFamily="Inter, system-ui, sans-serif"
+              fontStyle="700"
+              fill="#E4E4E7"
+              listening={false}
+            />
+          )}
           {strokes.map((stroke) => {
             const base = {
               stroke: stroke.tool.tool === 'eraser' ? '#ffffff' : stroke.tool.color,
