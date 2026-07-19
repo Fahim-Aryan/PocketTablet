@@ -1,4 +1,3 @@
-import { useRef, useEffect, useCallback } from 'react'
 import { usePointerCapture } from '../../../shared/hooks/usePointerCapture'
 import type { ToolState, StrokePoint } from '../../../shared/types/drawing'
 
@@ -21,88 +20,10 @@ export function TabletSurface({
   canDraw = true,
   pressure: _pressure,
 }: TabletSurfaceProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null)
-  const isDrawing = useRef(false)
-  const lastPoint = useRef<{ x: number; y: number } | null>(null)
-  const toolRef = useRef(tool)
-  const canDrawRef = useRef(canDraw)
-  toolRef.current = tool
-  canDrawRef.current = canDraw
-
-  const resizeCanvas = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    canvas.width = rect.width
-    canvas.height = rect.height
-    ctxRef.current = canvas.getContext('2d')
-  }, [])
-
-  useEffect(() => {
-    resizeCanvas()
-    window.addEventListener('resize', resizeCanvas)
-    return () => window.removeEventListener('resize', resizeCanvas)
-  }, [resizeCanvas])
-
-  const drawOnCanvas = useCallback((point: StrokePoint, startNew: boolean) => {
-    const canvas = canvasRef.current
-    const ctx = ctxRef.current
-    if (!canvas || !ctx) return
-
-    const x = point.x * canvas.width
-    const y = point.y * canvas.height
-    const t = toolRef.current
-
-    if (t.tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out'
-    } else {
-      ctx.globalCompositeOperation = 'source-over'
-      ctx.globalAlpha = t.opacity
-    }
-
-    const width = (t.tool === 'eraser' ? t.strokeWidth * 3 : t.strokeWidth) * (0.4 + point.pressure * 0.6)
-    ctx.lineWidth = width
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.strokeStyle = t.color
-
-    if (!startNew && lastPoint.current) {
-      ctx.beginPath()
-      ctx.moveTo(lastPoint.current.x, lastPoint.current.y)
-      ctx.lineTo(x, y)
-      ctx.stroke()
-    } else {
-      ctx.beginPath()
-      ctx.arc(x, y, width / 2, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    lastPoint.current = { x, y }
-  }, [])
-
-  const handleLocalStart = useCallback((point: StrokePoint, t: ToolState) => {
-    isDrawing.current = true
-    lastPoint.current = null
-    drawOnCanvas(point, true)
-    onStrokeStart(point, t)
-  }, [drawOnCanvas, onStrokeStart])
-
-  const handleLocalMove = useCallback((points: StrokePoint[]) => {
-    points.forEach((p) => drawOnCanvas(p, false))
-    onStrokeMove(points)
-  }, [drawOnCanvas, onStrokeMove])
-
-  const handleLocalEnd = useCallback(() => {
-    isDrawing.current = false
-    lastPoint.current = null
-    onStrokeEnd()
-  }, [onStrokeEnd])
-
   const { surfaceRef } = usePointerCapture({
-    onStrokeStart: handleLocalStart,
-    onStrokeMove: handleLocalMove,
-    onStrokeEnd: handleLocalEnd,
+    onStrokeStart,
+    onStrokeMove,
+    onStrokeEnd,
     tool,
     enabled,
     canDraw,
@@ -116,10 +37,6 @@ export function TabletSurface({
           boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4)',
         }}
       >
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 h-full w-full"
-        />
         <div
           ref={surfaceRef}
           className="absolute inset-0 z-10"

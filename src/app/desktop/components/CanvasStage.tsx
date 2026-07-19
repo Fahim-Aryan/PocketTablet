@@ -28,8 +28,6 @@ export interface CanvasStageHandle {
   hideCursor: () => void
 }
 
-const GRID_SPACING = 30
-
 export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<Konva.Stage>(null)
@@ -145,17 +143,6 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
     setStageY(0)
   }, [])
 
-  const gridDots: { x: number; y: number }[] = []
-  const cols = Math.ceil(dimensions.width / GRID_SPACING) + 2
-  const rows = Math.ceil(dimensions.height / GRID_SPACING) + 2
-  const gridOffX = (-stageX % GRID_SPACING + GRID_SPACING) % GRID_SPACING
-  const gridOffY = (-stageY % GRID_SPACING + GRID_SPACING) % GRID_SPACING
-  for (let i = -1; i < cols; i++) {
-    for (let j = -1; j < rows; j++) {
-      gridDots.push({ x: i * GRID_SPACING + gridOffX, y: j * GRID_SPACING + gridOffY })
-    }
-  }
-
   return (
     <div ref={containerRef} className="absolute inset-0 bg-zinc-50 dark:bg-zinc-950">
       <Stage
@@ -173,16 +160,14 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
         className="cursor-grab"
       >
         <Layer>
-          {gridDots.map((dot, i) => (
-            <Circle
-              key={i}
-              x={dot.x}
-              y={dot.y}
-              radius={0.5}
-              fill="#E4E4E7"
-              listening={false}
-            />
-          ))}
+          <Rect
+            x={0}
+            y={0}
+            width={dimensions.width}
+            height={dimensions.height}
+            fill="#FAFAFA"
+            listening={false}
+          />
         </Layer>
         <Layer>
           {strokes.length === 0 && (

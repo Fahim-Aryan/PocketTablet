@@ -80,6 +80,17 @@ export function usePointerCapture({
       if (!isDrawingRef.current) {
         if (!canDrawRef.current) return
       }
+      if (isDrawingRef.current && !canDrawRef.current) {
+        isDrawingRef.current = false
+        surface.releasePointerCapture(e.pointerId)
+        if (rafIdRef.current !== null) {
+          cancelAnimationFrame(rafIdRef.current)
+          rafIdRef.current = null
+        }
+        flushBuffer()
+        onStrokeEndRef.current()
+        return
+      }
       e.preventDefault()
       const rect = surface.getBoundingClientRect()
       const coalesced = (e as PointerEvent & { getCoalescedEvents?: () => PointerEvent[] }).getCoalescedEvents?.() ?? [e]

@@ -51,7 +51,7 @@ export function MobileConnectPage() {
   const [tool, setTool] = useState<ToolState>(DEFAULT_TOOL_STATE)
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [showClearModal, setShowClearModal] = useState(false)
-  const [strokeId, setStrokeId] = useState('')
+  const strokeIdRef = useRef('')
   const [pressure, setPressure] = useState(0)
   const [isDrawing, setIsDrawing] = useState(false)
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -87,25 +87,26 @@ export function MobileConnectPage() {
 
   const handleStrokeStart = useCallback((point: StrokePoint, currentTool: ToolState) => {
     const id = crypto.randomUUID()
-    setStrokeId(id)
+    strokeIdRef.current = id
     setPressure(point.pressure)
     send({ type: 'stroke:start', strokeId: id, tool: currentTool, point })
   }, [send])
 
   const handleStrokeMove = useCallback((points: StrokePoint[]) => {
-    if (!strokeId && points.length > 0) return
+    const id = strokeIdRef.current
+    if (!id) return
     const lastPoint = points[points.length - 1]
     if (lastPoint) setPressure(lastPoint.pressure)
-    send({ type: 'stroke:move', strokeId, points })
-  }, [send, strokeId])
+    send({ type: 'stroke:move', strokeId: id, points })
+  }, [send])
 
   const handleStrokeEnd = useCallback(() => {
-    const id = strokeId
-    setStrokeId('')
+    const id = strokeIdRef.current
+    strokeIdRef.current = ''
     setPressure(0)
     if (!id) return
     send({ type: 'stroke:end', strokeId: id })
-  }, [send, strokeId])
+  }, [send])
 
   const handleUndo = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(10)
