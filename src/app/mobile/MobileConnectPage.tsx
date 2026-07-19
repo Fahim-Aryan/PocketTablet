@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { nanoid } from 'nanoid'
 import { TabletSurface } from './components/TabletSurface'
 import { ConnectionStatusToast } from './components/ConnectionStatusToast'
 import { ClearConfirmModal } from './components/ClearConfirmModal'
 import { LandscapeHint } from '../../shared/components/LandscapeHint'
 import { useRealtimeRoom } from '../../shared/hooks/useRealtimeRoom'
 import { usePresence } from '../../shared/hooks/usePresence'
+import { generateId } from '../../shared/lib/roomToken'
 import { Undo2, Redo2, RotateCcw, Eraser, Pen, Minus, Square, Circle } from 'lucide-react'
 import type { ToolState, StrokePoint, ConnectionStatus, BroadcastEvent, ToolType } from '../../shared/types/drawing'
 
@@ -47,7 +47,7 @@ export function MobileConnectPage() {
   const [searchParams] = useSearchParams()
   const roomId = searchParams.get('room') ?? ''
   const token = searchParams.get('token') ?? ''
-  const [deviceId] = useState(() => nanoid())
+  const [deviceId] = useState(() => generateId())
   const [tool, setTool] = useState<ToolState>(DEFAULT_TOOL_STATE)
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [showClearModal, setShowClearModal] = useState(false)
@@ -86,7 +86,7 @@ export function MobileConnectPage() {
   }, [send])
 
   const handleStrokeStart = useCallback((point: StrokePoint, currentTool: ToolState) => {
-    const id = crypto.randomUUID()
+    const id = generateId()
     strokeIdRef.current = id
     setPressure(point.pressure)
     send({ type: 'stroke:start', strokeId: id, tool: currentTool, point })

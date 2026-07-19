@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHand
 import type Konva from 'konva'
 import { Stage, Layer, Line, Rect, Ellipse, Circle, Text, Transformer, Arrow, RegularPolygon } from 'react-konva'
 import type { Shape, ToolState, StrokePoint, SelectionState } from '../../../shared/types/drawing'
+import { generateId } from '../../../shared/lib/roomToken'
 
 const HANDLE_SIZE = 10
 const ROTATION_HANDLE_OFFSET = 30
@@ -31,8 +32,6 @@ export interface CanvasStageHandle {
   zoomToFit: () => void
   resetView: () => void
 }
-
-const generateId = () => crypto.randomUUID()
 
 function createShapeFromStroke(strokeId: string, tool: ToolState, points: number[]): Shape {
   const shapeType = tool.tool === 'arrow' || tool.tool === 'pen' ? 'line' : tool.tool

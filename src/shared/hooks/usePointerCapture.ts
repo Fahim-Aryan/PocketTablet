@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react'
 import type { StrokePoint, ToolState } from '../types/drawing'
+import { generateId } from '../lib/roomToken'
 
 interface UsePointerCaptureOptions {
   onStrokeStart: (point: StrokePoint, tool: ToolState) => void
@@ -72,7 +73,7 @@ export function usePointerCapture({
       }
 
       isDrawingRef.current = true
-      strokeIdRef.current = crypto.randomUUID()
+      strokeIdRef.current = generateId()
       onStrokeStartRef.current(point, toolRef.current)
     }
 

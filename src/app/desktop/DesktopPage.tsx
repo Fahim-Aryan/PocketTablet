@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react'
-import { nanoid } from 'nanoid'
 import { CanvasStage, type CanvasStageHandle } from './components/CanvasStage'
 import { QRPairingPanel } from './components/QRPairingPanel'
 import { ConnectionStatusBadge } from './components/ConnectionStatusBadge'
@@ -8,7 +7,7 @@ import { ToolbarMirror } from './components/ToolbarMirror'
 import { SetupGuide } from '../../shared/components/SetupGuide'
 import { useRealtimeRoom } from '../../shared/hooks/useRealtimeRoom'
 import { usePresence } from '../../shared/hooks/usePresence'
-import { generateRoomId, generatePairingToken, buildConnectUrl } from '../../shared/lib/roomToken'
+import { generateId, generateRoomId, generatePairingToken, buildConnectUrl } from '../../shared/lib/roomToken'
 import { getBaseUrl } from '../../shared/utils/qrCodeUrl'
 import { isSupabaseConfigured } from '../../shared/lib/supabaseClient'
 import type { BroadcastEvent, ConnectionStatus, ToolState } from '../../shared/types/drawing'
@@ -16,7 +15,7 @@ import type { BroadcastEvent, ConnectionStatus, ToolState } from '../../shared/t
 export function DesktopPage() {
   const [roomId] = useState(() => generateRoomId())
   const [pairingToken] = useState(() => generatePairingToken())
-  const [deviceId] = useState(() => nanoid())
+  const [deviceId] = useState(() => generateId())
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [activeTool, setActiveTool] = useState<ToolState | null>(null)
   const canvasRef = useRef<CanvasStageHandle>(null)
