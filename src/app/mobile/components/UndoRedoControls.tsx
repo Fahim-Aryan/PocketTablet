@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Trash2 } from 'lucide-react'
+import { Undo2, Redo2, RotateCcw } from 'lucide-react'
 
 interface UndoRedoControlsProps {
   onUndo: () => void
@@ -8,28 +8,30 @@ interface UndoRedoControlsProps {
 
 export function UndoRedoControls({ onUndo, onRedo, onClear }: UndoRedoControlsProps) {
   return (
-    <div className="flex items-center gap-1">
-      <button
-        onClick={onUndo}
-        className="cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-200"
-        aria-label="Undo"
-      >
-        <Undo2 className="h-5 w-5" />
-      </button>
-      <button
-        onClick={onRedo}
-        className="cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-200"
-        aria-label="Redo"
-      >
-        <Redo2 className="h-5 w-5" />
-      </button>
-      <div className="mx-1 h-5 w-px bg-zinc-700" />
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={onUndo}
+          className="cursor-pointer rounded-lg p-1.5 text-zinc-400 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-200"
+          aria-label="Undo"
+        >
+          <Undo2 className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onRedo}
+          className="cursor-pointer rounded-lg p-1.5 text-zinc-400 transition-colors duration-150 hover:bg-zinc-800 hover:text-zinc-200"
+          aria-label="Redo"
+        >
+          <Redo2 className="h-4 w-4" />
+        </button>
+      </div>
       <button
         onClick={onClear}
-        className="cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors duration-150 hover:bg-red-500/20 hover:text-red-400"
+        className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-zinc-400 transition-colors duration-150 hover:bg-red-500/10 hover:text-red-400"
         aria-label="Clear canvas"
       >
-        <Trash2 className="h-5 w-5" />
+        <RotateCcw className="h-3.5 w-3.5" />
+        Clear
       </button>
     </div>
   )

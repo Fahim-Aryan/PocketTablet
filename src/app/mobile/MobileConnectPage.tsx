@@ -16,6 +16,24 @@ const DEFAULT_TOOL_STATE: ToolState = {
   opacity: 1,
 }
 
+function PressureIndicator({ pressure }: { pressure: number }) {
+  return (
+    <div className="pointer-events-none fixed bottom-6 right-4 z-50 flex items-center gap-2">
+      <div className="flex items-center gap-1.5 rounded-full border border-zinc-700/50 bg-zinc-900/80 px-3 py-1.5 shadow-lg backdrop-blur-md">
+        <div className="h-1 w-16 overflow-hidden rounded-full bg-zinc-800">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-cta to-pink-400 transition-all duration-75"
+            style={{ width: `${Math.min(100, Math.round(pressure * 100))}%` }}
+          />
+        </div>
+        <span className="text-[10px] font-medium tabular-nums text-zinc-500">
+          {Math.round(pressure * 100)}%
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export function MobileConnectPage() {
   const [searchParams] = useSearchParams()
   const roomId = searchParams.get('room') ?? ''
@@ -25,6 +43,7 @@ export function MobileConnectPage() {
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [showClearModal, setShowClearModal] = useState(false)
   const [strokeId, setStrokeId] = useState('')
+  const [pressure, setPressure] = useState(0)
 
   const handleEvent = useCallback((_event: BroadcastEvent) => {
   }, [])
@@ -50,14 +69,21 @@ export function MobileConnectPage() {
     })
   }, [send])
 
+  const clearCanvas = useCallback(() => {
+    send({ type: 'canvas:clear' })
+  }, [send])
+
   const handleStrokeStart = useCallback((point: StrokePoint, currentTool: ToolState) => {
     const id = crypto.randomUUID()
     setStrokeId(id)
+    setPressure(point.pressure)
     send({ type: 'stroke:start', strokeId: id, tool: currentTool, point })
   }, [send])
 
   const handleStrokeMove = useCallback((points: StrokePoint[]) => {
-    if (!strokeId) return
+    if (!strokeId && points.length > 0) return
+    const lastPoint = points[points.length - 1]
+    if (lastPoint) setPressure(lastPoint.pressure)
     send({ type: 'stroke:move', strokeId, points })
   }, [send, strokeId])
 
@@ -65,6 +91,7 @@ export function MobileConnectPage() {
     if (!strokeId) return
     send({ type: 'stroke:end', strokeId })
     setStrokeId('')
+    setPressure(0)
   }, [send, strokeId])
 
   const handleUndo = useCallback(() => {
@@ -82,9 +109,9 @@ export function MobileConnectPage() {
   }, [])
 
   const confirmClear = useCallback(() => {
-    send({ type: 'canvas:clear' })
+    clearCanvas()
     setShowClearModal(false)
-  }, [send])
+  }, [clearCanvas])
 
   useEffect(() => {
     if (!roomId || !token) {
@@ -94,11 +121,11 @@ export function MobileConnectPage() {
 
   if (!roomId || !token) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-zinc-950 p-8">
+      <div className="flex h-dvh w-dvw flex-col items-center justify-center gap-4 bg-zinc-950 p-8">
         <div className="text-center">
-          <h1 className="mb-2 text-xl font-bold text-white">Invalid Link</h1>
-          <p className="text-sm text-zinc-400">
-            This connection link is invalid or missing parameters. Please scan the QR code again.
+          <h1 className="mb-2 text-xl font-bold tracking-tight text-white">PocketTablet</h1>
+          <p className="text-sm text-zinc-500">
+            Invalid connection. Please scan the QR code again.
           </p>
         </div>
       </div>
@@ -107,13 +134,18 @@ export function MobileConnectPage() {
 
   return (
     <div className="relative h-dvh w-dvw overflow-hidden bg-zinc-950">
-      <TabletSurface
-        tool={tool}
-        onStrokeStart={handleStrokeStart}
-        onStrokeMove={handleStrokeMove}
-        onStrokeEnd={handleStrokeEnd}
-        enabled={status === 'connected'}
-      />
+      <div className="absolute inset-0 flex flex-col">
+        <div className="relative flex-1">
+          <TabletSurface
+            tool={tool}
+            onStrokeStart={handleStrokeStart}
+            onStrokeMove={handleStrokeMove}
+            onStrokeEnd={handleStrokeEnd}
+            enabled={true}
+            pressure={pressure}
+          />
+        </div>
+      </div>
 
       <FloatingToolbar
         tool={tool}
@@ -124,6 +156,8 @@ export function MobileConnectPage() {
       />
 
       <ConnectionStatusToast status={status} />
+
+      <PressureIndicator pressure={pressure} />
 
       <ClearConfirmModal
         open={showClearModal}

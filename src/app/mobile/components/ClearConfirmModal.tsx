@@ -1,4 +1,3 @@
-import { AlertTriangle, X } from 'lucide-react'
 import { useEffect } from 'react'
 
 interface ClearConfirmModalProps {
@@ -10,7 +9,7 @@ interface ClearConfirmModalProps {
 export function ClearConfirmModal({ open, onConfirm, onCancel }: ClearConfirmModalProps) {
   useEffect(() => {
     if (open && navigator.vibrate) {
-      navigator.vibrate(30)
+      navigator.vibrate(20)
     }
   }, [open])
 
@@ -26,25 +25,18 @@ export function ClearConfirmModal({ open, onConfirm, onCancel }: ClearConfirmMod
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-xs rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
-            <AlertTriangle className="h-5 w-5 text-red-400" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-xs rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+        <div className="mb-5 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
+            <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
           </div>
-          <div>
-            <h3 className="text-base font-semibold text-white">Clear canvas?</h3>
-            <p className="text-sm text-zinc-400">This cannot be undone.</p>
-          </div>
-          <button
-            onClick={onCancel}
-            className="ml-auto cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <h3 className="text-base font-semibold text-white">Clear canvas?</h3>
+          <p className="mt-1 text-sm text-zinc-400">All strokes will be erased.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <button
             onClick={onCancel}
             className="flex-1 cursor-pointer rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 transition-colors duration-150 hover:bg-zinc-800"
@@ -53,7 +45,7 @@ export function ClearConfirmModal({ open, onConfirm, onCancel }: ClearConfirmMod
           </button>
           <button
             onClick={() => {
-              if (navigator.vibrate) navigator.vibrate(20)
+              if (navigator.vibrate) navigator.vibrate(15)
               onConfirm()
             }}
             className="flex-1 cursor-pointer rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-red-600"

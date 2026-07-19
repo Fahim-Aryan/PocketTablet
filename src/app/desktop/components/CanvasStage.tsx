@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react'
 import type Konva from 'konva'
-import { Stage, Layer, Line, Rect, Ellipse, Text } from 'react-konva'
+import { Stage, Layer, Line, Rect, Ellipse, Circle } from 'react-konva'
 import type { StrokePoint, ToolState } from '../../../shared/types/drawing'
 
 interface Stroke {
@@ -18,6 +18,8 @@ export interface CanvasStageHandle {
   handleUndo: () => void
   handleExport: () => string | undefined
 }
+
+const GRID_SPACING = 30
 
 export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -93,7 +95,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
       y: (pointer.y - stageY) / oldScale,
     }
 
-    setStageScale(newScale)
+    setStageScale(Math.max(0.1, Math.min(10, newScale)))
     setStageX(pointer.x - mousePointTo.x * newScale)
     setStageY(pointer.y - mousePointTo.y * newScale)
   }, [stageX, stageY])
@@ -112,8 +114,25 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
     if (container) container.style.cursor = 'grab'
   }, [])
 
+  const resetView = useCallback(() => {
+    setStageScale(1)
+    setStageX(0)
+    setStageY(0)
+  }, [])
+
+  const gridDots: { x: number; y: number }[] = []
+  const cols = Math.ceil(dimensions.width / GRID_SPACING) + 2
+  const rows = Math.ceil(dimensions.height / GRID_SPACING) + 2
+  const offsetX = (stageX % GRID_SPACING + GRID_SPACING) % GRID_SPACING
+  const offsetY = (stageY % GRID_SPACING + GRID_SPACING) % GRID_SPACING
+  for (let i = -1; i < cols; i++) {
+    for (let j = -1; j < rows; j++) {
+      gridDots.push({ x: i * GRID_SPACING + offsetX, y: j * GRID_SPACING + offsetY })
+    }
+  }
+
   return (
-    <div ref={containerRef} className="absolute inset-0 bg-white dark:bg-zinc-950">
+    <div ref={containerRef} className="absolute inset-0 bg-zinc-50 dark:bg-zinc-950">
       <Stage
         ref={stageRef}
         width={dimensions.width}
@@ -129,22 +148,30 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
         className="cursor-grab"
       >
         <Layer>
-          {strokes.length === 0 && (
-            <Text
-              x={dimensions.width / 2 - 120}
-              y={dimensions.height / 2 - 40}
-              text="PocketTablet"
-              fontSize={36}
-              fontFamily="Inter, system-ui, sans-serif"
-              fontStyle="700"
+          {gridDots.map((dot, i) => (
+            <Circle
+              key={i}
+              x={dot.x - (stageX % GRID_SPACING + GRID_SPACING) % GRID_SPACING + 0}
+              y={dot.y - (stageY % GRID_SPACING + GRID_SPACING) % GRID_SPACING + 0}
+              radius={0.5}
               fill="#E4E4E7"
+              listening={false}
+            />
+          ))}
+        </Layer>
+        <Layer>
+          {strokes.length === 0 && (
+            <Circle
+              x={dimensions.width / 2}
+              y={dimensions.height / 2 - 10}
+              radius={0}
               listening={false}
             />
           )}
           {strokes.map((stroke) => {
             const base = {
               stroke: stroke.tool.tool === 'eraser' ? '#ffffff' : stroke.tool.color,
-              strokeWidth: stroke.tool.strokeWidth * (stageScale || 1),
+              strokeWidth: Math.max(1, stroke.tool.strokeWidth * (stageScale || 1)),
               opacity: stroke.tool.opacity,
               lineCap: 'round' as const,
               lineJoin: 'round' as const,
@@ -194,6 +221,19 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
           })}
         </Layer>
       </Stage>
+
+      <div className="pointer-events-none fixed bottom-20 left-4 z-50 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white/80 px-2.5 py-1 shadow-sm backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
+        <span className="text-[11px] font-medium tabular-nums text-zinc-500">
+          {Math.round(stageScale * 100)}%
+        </span>
+      </div>
+
+      <button
+        onClick={resetView}
+        className="fixed bottom-20 left-16 z-50 cursor-pointer rounded-lg border border-zinc-200 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-zinc-500 shadow-sm backdrop-blur-md transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:bg-zinc-800"
+      >
+        Reset View
+      </button>
     </div>
   )
 })
