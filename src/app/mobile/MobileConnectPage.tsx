@@ -100,10 +100,11 @@ export function MobileConnectPage() {
   }, [send, strokeId])
 
   const handleStrokeEnd = useCallback(() => {
-    if (!strokeId) return
-    send({ type: 'stroke:end', strokeId })
+    const id = strokeId
     setStrokeId('')
     setPressure(0)
+    if (!id) return
+    send({ type: 'stroke:end', strokeId: id })
   }, [send, strokeId])
 
   const handleUndo = useCallback(() => {

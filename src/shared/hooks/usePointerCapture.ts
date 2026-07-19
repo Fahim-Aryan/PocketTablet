@@ -95,6 +95,10 @@ export function usePointerCapture({
 
     const onPointerUp = (e: PointerEvent) => {
       e.preventDefault()
+      if (!isDrawingRef.current) {
+        surface.releasePointerCapture(e.pointerId)
+        return
+      }
       isDrawingRef.current = false
       surface.releasePointerCapture(e.pointerId)
       if (rafIdRef.current !== null) {
@@ -107,6 +111,10 @@ export function usePointerCapture({
 
     const onPointerCancel = (e: PointerEvent) => {
       e.preventDefault()
+      if (!isDrawingRef.current) {
+        surface.releasePointerCapture(e.pointerId)
+        return
+      }
       isDrawingRef.current = false
       surface.releasePointerCapture(e.pointerId)
       if (rafIdRef.current !== null) {
