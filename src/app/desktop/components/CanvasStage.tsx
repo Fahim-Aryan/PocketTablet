@@ -10,6 +10,13 @@ interface Stroke {
   isActive: boolean
 }
 
+interface CursorState {
+  x: number
+  y: number
+  visible: boolean
+  tool: ToolState
+}
+
 export interface CanvasStageHandle {
   handleStrokeStart: (point: StrokePoint, tool: ToolState, strokeId: string) => void
   handleStrokeMove: (points: StrokePoint[], strokeId: string) => void
@@ -17,6 +24,8 @@ export interface CanvasStageHandle {
   handleClear: () => void
   handleUndo: () => void
   handleExport: () => string | undefined
+  setCursor: (point: StrokePoint, tool: ToolState) => void
+  hideCursor: () => void
 }
 
 const GRID_SPACING = 30
@@ -29,6 +38,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
   const [stageScale, setStageScale] = useState(1)
   const [stageX, setStageX] = useState(0)
   const [stageY, setStageY] = useState(0)
+  const [cursor, setCursor] = useState<CursorState | null>(null)
   const isPanning = useRef(false)
 
   useEffect(() => {
@@ -49,6 +59,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
   useImperativeHandle(ref, () => ({
     handleStrokeStart(point, tool, strokeId) {
       const { x, y } = normalizeToCanvas(point)
+      setCursor({ x, y, visible: true, tool })
       setStrokes((prev) => [...prev, { id: strokeId, tool, points: [x, y], isActive: true }])
     },
     handleStrokeMove(points, strokeId) {
@@ -56,6 +67,11 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
         const { x, y } = normalizeToCanvas(p)
         return [x, y]
       })
+      const last = points[points.length - 1]
+      if (last) {
+        const { x, y } = normalizeToCanvas(last)
+        setCursor((prev) => prev ? { ...prev, x, y } : null)
+      }
       setStrokes((prev) =>
         prev.map((s) =>
           s.id === strokeId && s.isActive
@@ -64,19 +80,28 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
         )
       )
     },
-    handleStrokeEnd(strokeId) {
+    handleStrokeEnd(_strokeId) {
+      setCursor((prev) => prev ? { ...prev, visible: false } : null)
       setStrokes((prev) =>
-        prev.map((s) => (s.id === strokeId ? { ...s, isActive: false } : s))
+        prev.map((s) => (s.id === _strokeId ? { ...s, isActive: false } : s))
       )
     },
     handleClear() {
       setStrokes([])
+      setCursor(null)
     },
     handleUndo() {
       setStrokes((prev) => prev.slice(0, -1))
     },
     handleExport() {
       return stageRef.current?.toDataURL({ pixelRatio: 2 })
+    },
+    setCursor(point, tool) {
+      const { x, y } = normalizeToCanvas(point)
+      setCursor({ x, y, visible: true, tool })
+    },
+    hideCursor() {
+      setCursor((prev) => prev ? { ...prev, visible: false } : null)
     },
   }), [normalizeToCanvas])
 
@@ -123,11 +148,11 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
   const gridDots: { x: number; y: number }[] = []
   const cols = Math.ceil(dimensions.width / GRID_SPACING) + 2
   const rows = Math.ceil(dimensions.height / GRID_SPACING) + 2
-  const offsetX = (stageX % GRID_SPACING + GRID_SPACING) % GRID_SPACING
-  const offsetY = (stageY % GRID_SPACING + GRID_SPACING) % GRID_SPACING
+  const gridOffX = (-stageX % GRID_SPACING + GRID_SPACING) % GRID_SPACING
+  const gridOffY = (-stageY % GRID_SPACING + GRID_SPACING) % GRID_SPACING
   for (let i = -1; i < cols; i++) {
     for (let j = -1; j < rows; j++) {
-      gridDots.push({ x: i * GRID_SPACING + offsetX, y: j * GRID_SPACING + offsetY })
+      gridDots.push({ x: i * GRID_SPACING + gridOffX, y: j * GRID_SPACING + gridOffY })
     }
   }
 
@@ -151,8 +176,8 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
           {gridDots.map((dot, i) => (
             <Circle
               key={i}
-              x={dot.x - (stageX % GRID_SPACING + GRID_SPACING) % GRID_SPACING + 0}
-              y={dot.y - (stageY % GRID_SPACING + GRID_SPACING) % GRID_SPACING + 0}
+              x={dot.x}
+              y={dot.y}
               radius={0.5}
               fill="#E4E4E7"
               listening={false}
@@ -220,6 +245,27 @@ export const CanvasStage = forwardRef<CanvasStageHandle>((_, ref) => {
             }
           })}
         </Layer>
+        {cursor && cursor.visible && (
+          <Layer>
+            <Circle
+              x={cursor.x}
+              y={cursor.y}
+              radius={(cursor.tool.strokeWidth * stageScale) / 2 + 4}
+              stroke={cursor.tool.tool === 'eraser' ? '#ffffff' : cursor.tool.color}
+              strokeWidth={1.5}
+              opacity={0.6}
+              listening={false}
+            />
+            <Circle
+              x={cursor.x}
+              y={cursor.y}
+              radius={3}
+              fill={cursor.tool.tool === 'eraser' ? '#ffffff' : cursor.tool.color}
+              opacity={0.8}
+              listening={false}
+            />
+          </Layer>
+        )}
       </Stage>
 
       <div className="pointer-events-none fixed bottom-20 left-4 z-50 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white/80 px-2.5 py-1 shadow-sm backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
