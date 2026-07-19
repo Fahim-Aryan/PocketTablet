@@ -7,6 +7,7 @@ interface UsePointerCaptureOptions {
   onStrokeEnd: () => void
   tool: ToolState
   enabled?: boolean
+  canDraw?: boolean
 }
 
 function normalizePoint(e: PointerEvent, rect: DOMRect): StrokePoint {
@@ -26,6 +27,7 @@ export function usePointerCapture({
   onStrokeEnd,
   tool,
   enabled = true,
+  canDraw = true,
 }: UsePointerCaptureOptions) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const strokeIdRef = useRef<string>('')
@@ -36,15 +38,19 @@ export function usePointerCapture({
   const onStrokeMoveRef = useRef(onStrokeMove)
   const onStrokeEndRef = useRef(onStrokeEnd)
   const toolRef = useRef(tool)
+  const canDrawRef = useRef(canDraw)
 
   onStrokeStartRef.current = onStrokeStart
   onStrokeMoveRef.current = onStrokeMove
   onStrokeEndRef.current = onStrokeEnd
   toolRef.current = tool
+  canDrawRef.current = canDraw
 
   const flushBuffer = useCallback(() => {
-    if (pointBufferRef.current.length > 0) {
+    if (pointBufferRef.current.length > 0 && isDrawingRef.current) {
       onStrokeMoveRef.current(pointBufferRef.current)
+      pointBufferRef.current = []
+    } else {
       pointBufferRef.current = []
     }
     rafIdRef.current = null
@@ -57,19 +63,30 @@ export function usePointerCapture({
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault()
       surface.setPointerCapture(e.pointerId)
-      isDrawingRef.current = true
-      strokeIdRef.current = crypto.randomUUID()
       const rect = surface.getBoundingClientRect()
       const point = normalizePoint(e, rect)
+
+      if (!canDrawRef.current) {
+        isDrawingRef.current = false
+        return
+      }
+
+      isDrawingRef.current = true
+      strokeIdRef.current = crypto.randomUUID()
       onStrokeStartRef.current(point, toolRef.current)
     }
 
     const onPointerMove = (e: PointerEvent) => {
-      if (!isDrawingRef.current) return
+      if (!isDrawingRef.current) {
+        if (!canDrawRef.current) return
+      }
       e.preventDefault()
       const rect = surface.getBoundingClientRect()
       const coalesced = (e as PointerEvent & { getCoalescedEvents?: () => PointerEvent[] }).getCoalescedEvents?.() ?? [e]
       const points = coalesced.map((ce) => normalizePoint(ce, rect))
+
+      if (!isDrawingRef.current) return
+
       pointBufferRef.current.push(...points)
       if (rafIdRef.current === null) {
         rafIdRef.current = requestAnimationFrame(flushBuffer)

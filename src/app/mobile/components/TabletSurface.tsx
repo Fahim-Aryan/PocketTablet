@@ -8,6 +8,7 @@ interface TabletSurfaceProps {
   onStrokeMove: (points: StrokePoint[]) => void
   onStrokeEnd: () => void
   enabled?: boolean
+  canDraw?: boolean
   pressure: number
 }
 
@@ -17,6 +18,7 @@ export function TabletSurface({
   onStrokeMove,
   onStrokeEnd,
   enabled = true,
+  canDraw = true,
   pressure: _pressure,
 }: TabletSurfaceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -24,7 +26,9 @@ export function TabletSurface({
   const isDrawing = useRef(false)
   const lastPoint = useRef<{ x: number; y: number } | null>(null)
   const toolRef = useRef(tool)
+  const canDrawRef = useRef(canDraw)
   toolRef.current = tool
+  canDrawRef.current = canDraw
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current
@@ -101,12 +105,13 @@ export function TabletSurface({
     onStrokeEnd: handleLocalEnd,
     tool,
     enabled,
+    canDraw,
   })
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 p-3">
+    <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 p-1.5">
       <div
-        className="relative h-full w-full overflow-hidden rounded-2xl border-[2.5px] border-zinc-700"
+        className="relative h-full w-full overflow-hidden rounded-xl border-[2px] border-zinc-700"
         style={{
           boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4)',
         }}
@@ -120,9 +125,16 @@ export function TabletSurface({
           className="absolute inset-0 z-10"
           style={{ touchAction: 'none' }}
         />
+        {!canDraw && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+            <span className="rounded-full bg-zinc-900/60 px-3 py-1 text-[10px] font-medium text-zinc-500 backdrop-blur-sm">
+              Hold left button to draw
+            </span>
+          </div>
+        )}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl"
-          style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}
+          className="pointer-events-none absolute inset-0 rounded-xl"
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
         />
       </div>
     </div>

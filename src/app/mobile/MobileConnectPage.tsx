@@ -1,13 +1,14 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { nanoid } from 'nanoid'
 import { TabletSurface } from './components/TabletSurface'
-import { FloatingToolbar } from './components/FloatingToolbar'
 import { ConnectionStatusToast } from './components/ConnectionStatusToast'
 import { ClearConfirmModal } from './components/ClearConfirmModal'
+import { LandscapeHint } from '../../shared/components/LandscapeHint'
 import { useRealtimeRoom } from '../../shared/hooks/useRealtimeRoom'
 import { usePresence } from '../../shared/hooks/usePresence'
-import type { ToolState, StrokePoint, ConnectionStatus, BroadcastEvent } from '../../shared/types/drawing'
+import { Undo2, Redo2, RotateCcw, Eraser, Pen, Minus, Square, Circle } from 'lucide-react'
+import type { ToolState, StrokePoint, ConnectionStatus, BroadcastEvent, ToolType } from '../../shared/types/drawing'
 
 const DEFAULT_TOOL_STATE: ToolState = {
   tool: 'pen',
@@ -18,21 +19,29 @@ const DEFAULT_TOOL_STATE: ToolState = {
 
 function PressureIndicator({ pressure }: { pressure: number }) {
   return (
-    <div className="pointer-events-none fixed bottom-6 right-4 z-50 flex items-center gap-2">
-      <div className="flex items-center gap-1.5 rounded-full border border-zinc-700/50 bg-zinc-900/80 px-3 py-1.5 shadow-lg backdrop-blur-md">
-        <div className="h-1 w-16 overflow-hidden rounded-full bg-zinc-800">
+    <div className="pointer-events-none fixed bottom-20 right-2 z-50 flex items-center gap-2">
+      <div className="flex items-center gap-1.5 rounded-full border border-zinc-700/50 bg-zinc-900/80 px-2.5 py-1 shadow-lg backdrop-blur-md">
+        <div className="h-1 w-12 overflow-hidden rounded-full bg-zinc-800">
           <div
             className="h-full rounded-full bg-gradient-to-r from-cta to-pink-400 transition-all duration-75"
             style={{ width: `${Math.min(100, Math.round(pressure * 100))}%` }}
           />
         </div>
-        <span className="text-[10px] font-medium tabular-nums text-zinc-500">
+        <span className="text-[9px] font-medium tabular-nums text-zinc-500">
           {Math.round(pressure * 100)}%
         </span>
       </div>
     </div>
   )
 }
+
+const TOOLS: { type: ToolType; icon: React.ReactNode }[] = [
+  { type: 'pen', icon: <Pen className="h-4 w-4" /> },
+  { type: 'eraser', icon: <Eraser className="h-4 w-4" /> },
+  { type: 'line', icon: <Minus className="h-4 w-4" /> },
+  { type: 'rectangle', icon: <Square className="h-4 w-4" /> },
+  { type: 'circle', icon: <Circle className="h-4 w-4" /> },
+]
 
 export function MobileConnectPage() {
   const [searchParams] = useSearchParams()
@@ -44,6 +53,9 @@ export function MobileConnectPage() {
   const [showClearModal, setShowClearModal] = useState(false)
   const [strokeId, setStrokeId] = useState('')
   const [pressure, setPressure] = useState(0)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leftBtnRef = useRef<HTMLButtonElement>(null)
 
   const handleEvent = useCallback((_event: BroadcastEvent) => {
   }, [])
@@ -119,9 +131,31 @@ export function MobileConnectPage() {
     }
   }, [roomId, token])
 
+  const handleLeftBtnPointerDown = useCallback(() => {
+    setIsDrawing(true)
+    if (navigator.vibrate) navigator.vibrate(8)
+    longPressRef.current = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(15)
+    }, 300)
+  }, [])
+
+  const handleLeftBtnPointerUp = useCallback(() => {
+    setIsDrawing(false)
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current)
+      longPressRef.current = null
+    }
+  }, [])
+
+  const handleRightBtnClick = useCallback(() => {
+    const nextTool = tool.tool === 'eraser' ? 'pen' : 'eraser'
+    handleToolChange({ tool: nextTool })
+    if (navigator.vibrate) navigator.vibrate(10)
+  }, [tool.tool, handleToolChange])
+
   if (!roomId || !token) {
     return (
-      <div className="flex h-dvh w-dvw flex-col items-center justify-center gap-4 bg-zinc-950 p-8">
+      <div className="flex h-dvh w-dvh flex-col items-center justify-center gap-4 bg-zinc-950 p-8">
         <div className="text-center">
           <h1 className="mb-2 text-xl font-bold tracking-tight text-white">PocketTablet</h1>
           <p className="text-sm text-zinc-500">
@@ -133,27 +167,87 @@ export function MobileConnectPage() {
   }
 
   return (
-    <div className="relative h-dvh w-dvw overflow-hidden bg-zinc-950">
-      <div className="absolute inset-0 flex flex-col">
-        <div className="relative flex-1">
-          <TabletSurface
-            tool={tool}
-            onStrokeStart={handleStrokeStart}
-            onStrokeMove={handleStrokeMove}
-            onStrokeEnd={handleStrokeEnd}
-            enabled={true}
-            pressure={pressure}
-          />
-        </div>
+    <div className="relative flex h-dvh w-dvw flex-col overflow-hidden bg-zinc-950">
+      <div className="relative flex-1">
+        <TabletSurface
+          tool={tool}
+          onStrokeStart={handleStrokeStart}
+          onStrokeMove={handleStrokeMove}
+          onStrokeEnd={handleStrokeEnd}
+          enabled={true}
+          canDraw={isDrawing}
+          pressure={pressure}
+        />
       </div>
 
-      <FloatingToolbar
-        tool={tool}
-        onToolChange={handleToolChange}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onClear={handleClear}
-      />
+      <div className="z-30 flex items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-2 py-1.5">
+        <button
+          ref={leftBtnRef}
+          onPointerDown={handleLeftBtnPointerDown}
+          onPointerUp={handleLeftBtnPointerUp}
+          onPointerLeave={handleLeftBtnPointerUp}
+          className={`flex cursor-pointer items-center gap-2 rounded-xl px-5 py-3 text-xs font-bold transition-all duration-100 select-none active:scale-95 ${
+            isDrawing
+              ? 'bg-cta text-white shadow-lg shadow-pink-500/30'
+              : 'bg-zinc-800 text-zinc-300 active:bg-zinc-700'
+          }`}
+          style={{ touchAction: 'none' }}
+        >
+          <span className="text-base leading-none">●</span>
+          <span className="text-[10px]">{isDrawing ? 'DRAWING' : 'DRAW' }</span>
+        </button>
+
+        <button
+          onClick={handleRightBtnClick}
+          className={`flex cursor-pointer items-center justify-center rounded-xl px-3 py-3 text-xs font-bold transition-all duration-100 select-none active:scale-95 ${
+            tool.tool === 'eraser'
+              ? 'bg-amber-600 text-white'
+              : 'bg-zinc-800 text-zinc-300 active:bg-zinc-700'
+          }`}
+          style={{ touchAction: 'none' }}
+        >
+          <Eraser className="h-4 w-4" />
+        </button>
+
+        <div className="mx-1 h-6 w-px bg-zinc-700" />
+
+        <div className="flex items-center gap-0.5">
+          {TOOLS.filter(t => t.type !== 'eraser').map(({ type, icon }) => (
+            <button
+              key={type}
+              onClick={() => handleToolChange({ tool: type })}
+              className={`cursor-pointer rounded-lg p-1.5 transition-all duration-150 ${
+                tool.tool === type
+                  ? 'bg-cta/20 text-cta'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-0.5">
+          <button
+            onClick={handleUndo}
+            className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleRedo}
+            className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleClear}
+            className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-red-400"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       <ConnectionStatusToast status={status} />
 
@@ -164,6 +258,8 @@ export function MobileConnectPage() {
         onConfirm={confirmClear}
         onCancel={() => setShowClearModal(false)}
       />
+
+      <LandscapeHint />
     </div>
   )
 }

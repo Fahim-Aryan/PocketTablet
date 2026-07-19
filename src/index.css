@@ -81,4 +81,40 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  @media (orientation: portrait) and (max-width: 768px) {
+    .landscape-hint {
+      display: flex !important;
+    }
+  }
+}
+
+.landscape-hint {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #09090B;
+  color: #FAFAFA;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.landscape-hint-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.landscape-hint-rotate {
+  animation: rotate-phone 2s ease-in-out infinite;
+}
+
+@keyframes rotate-phone {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
 }
