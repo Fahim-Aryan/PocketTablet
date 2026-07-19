@@ -14,15 +14,13 @@
     "@tailwindcss/vite": "^4.3.3",
     "konva": "^10.3.0",
     "lucide-react": "^1.25.0",
-    "nanoid": "^6.0.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-konva": "^19.2.5",
     "react-router-dom": "^7.18.1",
     "tailwindcss": "^4.3.3",
-    "zod": "^4.4.3",
-    "zustand": "^5.0.14"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
