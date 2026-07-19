@@ -21,30 +21,46 @@ export function useRealtimeRoom({
 
   const send = useCallback((event: BroadcastEvent) => {
     if (!isSupabaseConfigured) return
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: event.type,
-      payload: event,
-    })
+    try {
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: event.type,
+        payload: event,
+      })
+    } catch (err) {
+      console.warn('PocketTablet: send failed', err)
+    }
   }, [])
 
   useEffect(() => {
     if (!enabled || !isSupabaseConfigured || !supabase) return
 
-    const channel = supabase.channel(`room:${roomId}`, {
-      config: { broadcast: { self: false, ack: false } },
-    })
-
-    channelRef.current = channel
-
-    channel
-      .on('broadcast', { event: '*' }, ({ payload }) => {
-        onEventRef.current(payload as BroadcastEvent)
+    try {
+      const channel = supabase.channel(`room:${roomId}`, {
+        config: { broadcast: { self: false, ack: false } },
       })
-      .subscribe()
 
-    return () => {
-      supabase!.removeChannel(channel)
+      channelRef.current = channel
+
+      channel
+        .on('broadcast', { event: '*' }, ({ payload }) => {
+          try {
+            onEventRef.current(payload as BroadcastEvent)
+          } catch (err) {
+            console.warn('PocketTablet: event handler error', err)
+          }
+        })
+        .subscribe()
+
+      return () => {
+        try {
+          supabase!.removeChannel(channel)
+        } catch (err) {
+          console.warn('PocketTablet: removeChannel error', err)
+        }
+      }
+    } catch (err) {
+      console.warn('PocketTablet: channel creation error', err)
     }
   }, [roomId, enabled])
 

@@ -25,53 +25,70 @@ export function usePresence({
 
   const trackPresence = useCallback(async () => {
     if (!isSupabaseConfigured || !channelRef.current) return
-    const payload: PresencePayload = { role, deviceId, joinedAt: Date.now() }
-    await channelRef.current.track(payload)
+    try {
+      const payload: PresencePayload = { role, deviceId, joinedAt: Date.now() }
+      await channelRef.current.track(payload)
+    } catch (err) {
+      console.warn('PocketTablet: trackPresence error', err)
+    }
   }, [role, deviceId])
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
-      if (role === 'desktop') {
-        onStatusChangeRef.current('waiting_for_device')
-      } else {
-        onStatusChangeRef.current('disconnected')
-      }
+      onStatusChangeRef.current(role === 'desktop' ? 'waiting_for_device' : 'disconnected')
       return
     }
 
-    const channel = supabase.channel(`room:${roomId}`, {
-      config: { broadcast: { self: false, ack: false } },
-    })
+    try {
+      const channel = supabase.channel(`presence:${roomId}`, {
+        config: { broadcast: { self: false, ack: false } },
+      })
 
-    channelRef.current = channel
+      channelRef.current = channel
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        const mobilePresent = Object.values(state).some((presences) =>
-          (presences as unknown as PresencePayload[]).some((p) => p.role === 'mobile')
-        )
-        const desktopPresent = Object.values(state).some((presences) =>
-          (presences as unknown as PresencePayload[]).some((p) => p.role === 'desktop')
-        )
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          try {
+            const state = channel.presenceState()
+            const entries = Object.values(state) as unknown as PresencePayload[][]
+            const mobilePresent = entries.some((list) =>
+              list.some((p) => p.role === 'mobile')
+            )
+            const desktopPresent = entries.some((list) =>
+              list.some((p) => p.role === 'desktop')
+            )
 
-        if (role === 'desktop') {
-          onStatusChangeRef.current(mobilePresent ? 'connected' : 'waiting_for_device')
-          onOtherPresenceRef.current?.(mobilePresent)
-        } else {
-          onStatusChangeRef.current(desktopPresent ? 'connected' : 'waiting_for_device')
-          onOtherPresenceRef.current?.(desktopPresent)
+            if (role === 'desktop') {
+              onStatusChangeRef.current(mobilePresent ? 'connected' : 'waiting_for_device')
+              onOtherPresenceRef.current?.(mobilePresent)
+            } else {
+              onStatusChangeRef.current(desktopPresent ? 'connected' : 'waiting_for_device')
+              onOtherPresenceRef.current?.(desktopPresent)
+            }
+          } catch (err) {
+            console.warn('PocketTablet: presence sync error', err)
+          }
+        })
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await trackPresence()
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          onStatusChangeRef.current('disconnected')
         }
       })
 
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await trackPresence()
+      return () => {
+        try {
+          supabase!.removeChannel(channel)
+        } catch (err) {
+          console.warn('PocketTablet: removeChannel error', err)
+        }
       }
-    })
-
-    return () => {
-      supabase!.removeChannel(channel)
+    } catch (err) {
+      console.warn('PocketTablet: channel creation error', err)
+      onStatusChangeRef.current('disconnected')
     }
   }, [roomId, role, deviceId, trackPresence])
 
