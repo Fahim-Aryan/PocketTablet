@@ -5,10 +5,12 @@ import { QRPairingPanel } from './components/QRPairingPanel'
 import { ConnectionStatusBadge } from './components/ConnectionStatusBadge'
 import { ExportControls } from './components/ExportControls'
 import { ToolbarMirror } from './components/ToolbarMirror'
+import { SetupGuide } from '../../shared/components/SetupGuide'
 import { useRealtimeRoom } from '../../shared/hooks/useRealtimeRoom'
 import { usePresence } from '../../shared/hooks/usePresence'
 import { generateRoomId, generatePairingToken, buildConnectUrl } from '../../shared/lib/roomToken'
 import { getBaseUrl } from '../../shared/utils/qrCodeUrl'
+import { isSupabaseConfigured } from '../../shared/lib/supabaseClient'
 import type { BroadcastEvent, ConnectionStatus, ToolState } from '../../shared/types/drawing'
 
 export function DesktopPage() {
@@ -97,6 +99,8 @@ export function DesktopPage() {
       }} />
 
       <ConnectionStatusBadge status={status} />
+
+      {!isSupabaseConfigured && <SetupGuide />}
     </div>
   )
 }
